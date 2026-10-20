@@ -11,6 +11,7 @@ import {
     formatDateLong,
     formatDuration,
     formatPrice,
+    formatTime12,
 } from '@/lib/format';
 import type { ClinicInfo, Service } from '@/types';
 
@@ -71,7 +72,7 @@ defineProps<{
                 <div>
                     <dt class="text-[11px] text-white/40">Hora</dt>
                     <dd class="font-medium">
-                        {{ time || 'Sin seleccionar' }}
+                        {{ time ? formatTime12(time) : 'Sin seleccionar' }}
                     </dd>
                 </div>
             </div>
@@ -88,7 +89,7 @@ defineProps<{
                     <dd class="mt-0.5 text-xs leading-relaxed text-white/45">
                         {{
                             isHomeService
-                                ? 'Zapopan y zonas cercanas · 08:00–14:00'
+                                ? 'Zapopan y zonas cercanas · 8:00 a.m. – 2:00 p.m.'
                                 : clinic.address
                         }}
                     </dd>

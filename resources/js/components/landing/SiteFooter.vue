@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { Activity, Mail, MapPin, MessageCircle, Phone } from '@lucide/vue';
 import { whatsappUrl } from '@/lib/format';
+import { login } from '@/routes';
 import type { ClinicInfo } from '@/types';
 
 const props = defineProps<{
@@ -25,7 +27,11 @@ const message = whatsappUrl(
         <div class="content-shell py-14">
             <div class="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
                 <div>
-                    <a href="#inicio" class="flex items-center gap-2.5">
+                    <Link
+                        :href="login()"
+                        class="flex items-center gap-2.5"
+                        aria-label="Iniciar sesión"
+                    >
                         <span
                             class="grid size-9 place-items-center rounded-xl bg-brand text-ink"
                         >
@@ -36,7 +42,7 @@ const message = whatsappUrl(
                         >
                             Fisio<span class="text-brand">Black</span>
                         </span>
-                    </a>
+                    </Link>
                     <p class="mt-4 max-w-xs text-sm leading-relaxed text-white/50">
                         {{ clinic.tagline }} en Zapopan. Recupera tu movimiento
                         con un plan de atención hecho para ti.

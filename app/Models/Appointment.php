@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AppointmentStatus;
+use App\Support\TimeLabel;
 use Carbon\CarbonImmutable;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -65,7 +66,12 @@ class Appointment extends Model
 
     public function timeLabel(): string
     {
-        return substr($this->appointment_time, 0, 5);
+        return TimeLabel::twelveHour($this->appointment_time);
+    }
+
+    public function folio(): string
+    {
+        return 'FB-'.str_pad((string) $this->getKey(), 4, '0', STR_PAD_LEFT);
     }
 
     public function startsAt(): CarbonImmutable

@@ -50,12 +50,12 @@ function openWhatsApp(url: string): void {
             class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
         >
             <div class="flex min-w-0 gap-4">
-                <div class="w-16 shrink-0 rounded-xl bg-mist py-2 text-center">
-                    <p class="font-display text-base font-bold text-ink">
+                <div class="w-20 shrink-0 rounded-xl bg-mist py-2 text-center">
+                    <p class="font-display text-sm font-bold text-ink">
                         {{ appointment.appointment_time }}
                     </p>
                     <p class="text-[10px] tracking-wide text-ink/40 uppercase">
-                        {{ appointment.service.duration_minutes }} min
+                        {{ appointment.folio }}
                     </p>
                 </div>
 

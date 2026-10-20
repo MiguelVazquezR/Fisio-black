@@ -24,34 +24,71 @@ test('guests cannot access the agenda', function () {
     $this->get(route('admin.dashboard'))->assertRedirect(route('login'));
 });
 
-test('the agenda lists appointments for the selected day', function () {
-    $service = Service::factory()->create();
-    $date = CarbonImmutable::today();
+test('the agenda opens in the weekly view with totals for the week', function () {
+    $service = Service::factory()->create(['name' => 'Fisioterapia deportiva']);
+    $weekStart = CarbonImmutable::today()->startOfWeek(CarbonInterface::MONDAY);
 
     Appointment::factory()->create([
         'service_id' => $service->id,
-        'appointment_date' => $date->toDateString(),
+        'appointment_date' => $weekStart->toDateString(),
         'appointment_time' => '10:00:00',
         'patient_name' => 'Ana Torres',
     ]);
     Appointment::factory()->create([
         'service_id' => $service->id,
-        'appointment_date' => $date->addDay()->toDateString(),
+        'appointment_date' => $weekStart->addDays(2)->toDateString(),
         'appointment_time' => '11:00:00',
         'patient_name' => 'Luis Pérez',
     ]);
 
     $this->actingAs(User::factory()->create())
-        ->get(route('admin.dashboard', ['date' => $date->toDateString()]))
+        ->get(route('admin.dashboard', ['date' => $weekStart->toDateString()]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/Dashboard')
+            ->has('appointments', 2)
+            ->where('filters.date', $weekStart->toDateString())
+            ->where('filters.view', 'week')
+            ->where('counts.total', 2)
+            ->where('appointments.0.patient_name', 'Ana Torres')
+            ->where('appointments.1.patient_name', 'Luis Pérez')
+            ->where('appointments.0.service.name', 'Fisioterapia deportiva')
+            ->where('appointments.0.service.id', $service->id)
+            ->missing('appointments.0.service.data')
+            ->has('week', 7)
+            ->has('statusOptions', 4)
+        );
+});
+
+test('the agenda can be narrowed to a single day', function () {
+    $service = Service::factory()->create();
+    $weekStart = CarbonImmutable::today()->startOfWeek(CarbonInterface::MONDAY);
+
+    Appointment::factory()->create([
+        'service_id' => $service->id,
+        'appointment_date' => $weekStart->toDateString(),
+        'appointment_time' => '10:00:00',
+        'patient_name' => 'Ana Torres',
+    ]);
+    Appointment::factory()->create([
+        'service_id' => $service->id,
+        'appointment_date' => $weekStart->addDays(2)->toDateString(),
+        'appointment_time' => '11:00:00',
+        'patient_name' => 'Luis Pérez',
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('admin.dashboard', [
+            'date' => $weekStart->toDateString(),
+            'view' => 'day',
+        ]))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/Dashboard')
             ->has('appointments', 1)
             ->where('appointments.0.patient_name', 'Ana Torres')
-            ->where('filters.date', $date->toDateString())
             ->where('filters.view', 'day')
-            ->has('week', 7)
-            ->has('statusOptions', 4)
+            ->where('counts.total', 1)
         );
 });
 
@@ -161,7 +198,7 @@ test('an appointment can be rescheduled', function () {
 
     expect($appointment->status)->toBe(AppointmentStatus::Rescheduled);
     expect($appointment->appointment_date->toDateString())->toBe($date);
-    expect($appointment->timeLabel())->toBe('11:00');
+    expect($appointment->timeLabel())->toBe('11:00 a.m.');
 });
 
 test('an appointment cannot be rescheduled onto a taken slot', function () {
@@ -191,7 +228,7 @@ test('an appointment cannot be rescheduled onto a taken slot', function () {
     $appointment->refresh();
 
     expect($appointment->status)->toBe(AppointmentStatus::Pending);
-    expect($appointment->timeLabel())->toBe('11:00');
+    expect($appointment->timeLabel())->toBe('11:00 a.m.');
 });
 
 test('an appointment can be cancelled', function () {

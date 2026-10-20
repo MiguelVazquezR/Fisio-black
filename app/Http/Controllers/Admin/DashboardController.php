@@ -44,7 +44,7 @@ class DashboardController extends Controller
             ? AppointmentStatus::from($validated['status'])
             : null;
 
-        $view = $validated['view'] ?? 'day';
+        $view = $validated['view'] ?? 'week';
 
         $weekStart = $date->startOfWeek(CarbonInterface::MONDAY);
         $rangeStart = $view === 'week' ? $weekStart : $date;
@@ -58,8 +58,10 @@ class DashboardController extends Controller
             ->orderBy('appointment_time')
             ->get();
 
-        $statusCounts = Appointment::query()
-            ->whereDate('appointment_date', $date->toDateString())
+        $periodAppointments = Appointment::query()
+            ->whereBetween('appointment_date', [$rangeStart->toDateString(), $rangeEnd->toDateString()]);
+
+        $statusCounts = (clone $periodAppointments)
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -74,9 +76,6 @@ class DashboardController extends Controller
                 CarbonImmutable::parse((string) $day)->toDateString() => (int) $total,
             ]);
 
-        $dayAppointments = Appointment::query()
-            ->whereDate('appointment_date', $date->toDateString());
-
         return Inertia::render('admin/Dashboard', [
             'appointments' => AppointmentResource::collection($appointments)->toArray($request),
             'filters' => [
@@ -84,12 +83,14 @@ class DashboardController extends Controller
                 'status' => $status?->value,
                 'view' => $view,
             ],
-            'dateLabel' => DateLabel::long($date),
+            'dateLabel' => $view === 'week'
+                ? DateLabel::range($rangeStart, $rangeEnd)
+                : DateLabel::long($date),
             'counts' => [
                 'total' => (int) $statusCounts->sum(),
                 'pending' => (int) ($statusCounts[AppointmentStatus::Pending->value] ?? 0),
                 'confirmed' => (int) ($statusCounts[AppointmentStatus::Confirmed->value] ?? 0),
-                'home' => (clone $dayAppointments)->active()->where('is_home_service', true)->count(),
+                'home' => (clone $periodAppointments)->active()->where('is_home_service', true)->count(),
             ],
             'week' => $this->weekDays($weekStart, $date, $weekCounts),
             'statusOptions' => collect(AppointmentStatus::cases())

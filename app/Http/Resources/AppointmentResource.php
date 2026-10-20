@@ -22,7 +22,7 @@ class AppointmentResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'folio' => 'FB-'.str_pad((string) $this->id, 4, '0', STR_PAD_LEFT),
+            'folio' => $this->folio(),
             'patient_name' => $this->patient_name,
             'patient_phone' => $this->patient_phone,
             'patient_email' => $this->patient_email,
@@ -36,7 +36,7 @@ class AppointmentResource extends JsonResource
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'notes' => $this->notes,
-            'service' => new ServiceResource($this->service),
+            'service' => ServiceResource::make($this->service)->resolve($request),
             'whatsapp' => [
                 'confirmation' => WhatsAppMessage::url($this->patient_phone, WhatsAppMessage::confirmation($this->resource)),
                 'reschedule' => WhatsAppMessage::url($this->patient_phone, WhatsAppMessage::reschedule($this->resource)),

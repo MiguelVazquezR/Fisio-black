@@ -12,8 +12,14 @@ import { computed, ref, watch } from 'vue';
 import BookingCalendar from '@/components/booking/BookingCalendar.vue';
 import BookingSummary from '@/components/booking/BookingSummary.vue';
 import TimeSlotPicker from '@/components/booking/TimeSlotPicker.vue';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { useBookingSelection } from '@/composables/useBookingSelection';
-import { formatDuration, formatPrice, whatsappUrl } from '@/lib/format';
+import { formatDuration, formatPrice, formatTime12, whatsappUrl } from '@/lib/format';
 import { store } from '@/routes/appointments';
 import { availability } from '@/routes/booking';
 import type {
@@ -36,12 +42,24 @@ const props = defineProps<{
 const { selectedServiceSlug, consumeService } = useBookingSelection();
 
 const initialSlug = selectedServiceSlug.value ?? props.selectedService;
-const initialService =
+const initialService: Service | null =
     props.services.find((service) => service.slug === initialSlug) ??
     props.services[0] ??
     null;
 
-const form = useForm({
+type BookingFormData = {
+    service_id: number | null;
+    is_home_service: boolean;
+    appointment_date: string;
+    appointment_time: string;
+    patient_name: string;
+    patient_phone: string;
+    patient_email: string;
+    address_notes: string;
+    notes: string;
+};
+
+const form = useForm<BookingFormData>({
     service_id: initialService?.id ?? null,
     is_home_service: false,
     appointment_date: '',
@@ -79,19 +97,46 @@ const loadingSlots = ref(false);
 const slotError = ref<string | null>(null);
 let slotsRequest: AbortController | null = null;
 
-const successWhatsApp = computed(() => {
-    if (!props.recentAppointment) {
-        return whatsappUrl(
-            props.clinic.whatsapp,
-            'Hola, quisiera confirmar mi cita.',
-        );
-    }
+const successOpen = ref(false);
+const successAppointment = ref<Appointment | null>(null);
 
+function confirmationWhatsApp(appointment: Appointment): string {
     return whatsappUrl(
         props.clinic.whatsapp,
-        `Hola, acabo de agendar mi cita (folio ${props.recentAppointment.folio}) para el ${props.recentAppointment.date_label} a las ${props.recentAppointment.appointment_time}. Quisiera confirmarla.`,
+        `Hola, acabo de agendar mi cita (folio ${appointment.folio}) para el ${appointment.date_label} a las ${appointment.appointment_time}. Quisiera confirmarla.`,
     );
-});
+}
+
+const successWhatsApp = computed(() =>
+    props.recentAppointment
+        ? confirmationWhatsApp(props.recentAppointment)
+        : whatsappUrl(props.clinic.whatsapp, 'Hola, quisiera confirmar mi cita.'),
+);
+
+function resetBookingForm(): void {
+    form.reset();
+    form.service_id = null;
+    form.appointment_date = '';
+    form.appointment_time = '';
+    form.is_home_service = false;
+    form.clearErrors();
+    availabilityResult.value = null;
+    slotError.value = null;
+}
+
+watch(
+    () => props.recentAppointment,
+    (appointment) => {
+        if (!appointment) {
+            return;
+        }
+
+        successAppointment.value = appointment;
+        successOpen.value = true;
+        resetBookingForm();
+    },
+    { immediate: true },
+);
 
 async function loadAvailability(): Promise<void> {
     slotsRequest?.abort();
@@ -243,7 +288,6 @@ function submit(): void {
                 </div>
             </div>
 
-
             <div class="mt-10 grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
                 <div class="space-y-5">
                     <div class="rounded-3xl border border-hairline bg-white p-6 sm:p-7">
@@ -325,9 +369,9 @@ function submit(): void {
                                         En clínica
                                     </span>
                                     <span class="block text-[11px] text-ink/45">
-                                        {{ booking.clinic_hours[0] }}–{{
-                                            booking.clinic_hours[1]
-                                        }}
+                                        {{ formatTime12(booking.clinic_hours[0]) }}
+                                        –
+                                        {{ formatTime12(booking.clinic_hours[1]) }}
                                     </span>
                                 </span>
                             </button>
@@ -347,9 +391,9 @@ function submit(): void {
                                         A domicilio
                                     </span>
                                     <span class="block text-[11px] text-ink/45">
-                                        {{ booking.home_hours[0] }}–{{
-                                            booking.home_hours[1]
-                                        }}
+                                        {{ formatTime12(booking.home_hours[0]) }}
+                                        –
+                                        {{ formatTime12(booking.home_hours[1]) }}
                                     </span>
                                 </span>
                             </button>
@@ -621,6 +665,89 @@ function submit(): void {
 
             </div>
         </div>
+
+        <Dialog v-model:open="successOpen">
+            <DialogContent class="max-w-md border-hairline bg-white p-6 text-ink">
+                <div v-if="successAppointment" class="text-center">
+                    <span
+                        class="mx-auto grid size-14 place-items-center rounded-full bg-brand text-ink"
+                    >
+                        <CheckCircle2 class="size-7" />
+                    </span>
+
+                    <DialogTitle
+                        class="mt-4 font-display text-2xl leading-tight font-bold tracking-tight text-ink"
+                    >
+                        ¡Tu cita quedó registrada!
+                    </DialogTitle>
+                    <DialogDescription
+                        class="mt-2 text-sm leading-relaxed text-ink/55"
+                    >
+                        Estatus: {{ successAppointment.status_label }}. Te
+                        confirmaremos por WhatsApp muy pronto.
+                    </DialogDescription>
+
+                    <dl
+                        class="mt-5 space-y-2.5 rounded-2xl bg-mist p-4 text-left text-sm"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <dt class="text-ink/50">Folio</dt>
+                            <dd class="font-semibold text-ink">
+                                {{ successAppointment.folio }}
+                            </dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-3">
+                            <dt class="shrink-0 text-ink/50">Servicio</dt>
+                            <dd class="text-right font-semibold text-ink">
+                                {{ successAppointment.service.name }}
+                            </dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-3">
+                            <dt class="text-ink/50">Fecha</dt>
+                            <dd class="text-right font-semibold text-ink">
+                                {{ successAppointment.date_label }}
+                            </dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-3">
+                            <dt class="text-ink/50">Hora</dt>
+                            <dd class="font-semibold text-ink">
+                                {{ successAppointment.appointment_time }}
+                            </dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-3">
+                            <dt class="text-ink/50">Modalidad</dt>
+                            <dd class="font-semibold text-ink">
+                                {{ successAppointment.modality_label }}
+                            </dd>
+                        </div>
+                    </dl>
+
+                    <p class="mt-3 text-[11px] leading-relaxed text-ink/45">
+                        Tu horario queda apartado mientras el equipo revisa la
+                        agenda. Si necesitas cambiarlo, escríbenos por
+                        WhatsApp.
+                    </p>
+
+                    <a
+                        :href="confirmationWhatsApp(successAppointment)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-ink text-sm font-semibold text-white transition hover:bg-[#2c2e28]"
+                    >
+                        <MessageCircle class="size-4" />
+                        Confirmar por WhatsApp
+                    </a>
+
+                    <button
+                        type="button"
+                        class="mt-2 inline-flex h-11 w-full items-center justify-center rounded-xl border border-hairline bg-white text-sm font-semibold text-ink transition hover:border-ink/30"
+                        @click="successOpen = false"
+                    >
+                        Agendar otra cita
+                    </button>
+                </div>
+            </DialogContent>
+        </Dialog>
     </section>
 </template>
 

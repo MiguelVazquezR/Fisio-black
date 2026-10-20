@@ -31,7 +31,22 @@ export function formatDateShort(date: string): string {
     return shortDateFormatter.format(new Date(`${date}T12:00:00`));
 }
 
+export function formatTime12(time: string): string {
+    const match = /^(\d{1,2}):(\d{2})/.exec(time);
+
+    if (!match) {
+        return time;
+    }
+
+    const hour = Number(match[1]);
+    const suffix = hour < 12 ? 'a.m.' : 'p.m.';
+    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+
+    return `${hour12}:${match[2]} ${suffix}`;
+}
+
 export function formatDuration(minutes: number): string {
+
     if (minutes < 60) {
         return `${minutes} min`;
     }

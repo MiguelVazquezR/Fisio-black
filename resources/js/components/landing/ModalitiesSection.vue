@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowRight, ArrowUpRight, House, MapPin, MessageCircle } from '@lucide/vue';
-import { whatsappUrl } from '@/lib/format';
+import { formatTime12, whatsappUrl } from '@/lib/format';
 import type { BookingConfig, ClinicInfo } from '@/types';
 
 const props = defineProps<{
@@ -9,7 +9,7 @@ const props = defineProps<{
 }>();
 
 function hours(range: [string, string]): string {
-    return `${range[0]} – ${range[1]}`;
+    return `${formatTime12(range[0])} – ${formatTime12(range[1])}`;
 }
 
 const homeMessage = whatsappUrl(

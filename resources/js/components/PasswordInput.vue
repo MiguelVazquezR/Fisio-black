@@ -9,6 +9,7 @@ defineOptions({ inheritAttrs: false });
 
 const props = defineProps<{
     class?: HTMLAttributes['class'];
+    toggleClass?: HTMLAttributes['class'];
     autofocus?: boolean;
 }>();
 
@@ -36,9 +37,10 @@ defineExpose({
             :class="
                 cn(
                     'absolute inset-y-0 right-0 flex items-center rounded-r-md px-3 text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none',
+                    props.toggleClass,
                 )
             "
-            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+            :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             :tabindex="-1"
         >
             <EyeOff v-if="showPassword" class="size-4" />

@@ -187,7 +187,13 @@ function confirmCancel(): void {
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl border border-hairline bg-white p-4">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs text-ink/45">Citas del día</p>
+                    <p class="text-xs text-ink/45">
+                        {{
+                            filters.view === 'week'
+                                ? 'En la semana'
+                                : 'En el día'
+                        }}
+                    </p>
                     <CalendarDays class="size-4 text-ink/25" />
                 </div>
                 <p class="mt-2 font-display text-2xl font-bold">
@@ -238,7 +244,9 @@ function confirmCancel(): void {
                 "
                 @click="applyFilters({ date: day.date })"
             >
-                <span class="block text-[10px] tracking-wide uppercase opacity-60">
+                <span
+                    class="block text-[10px] tracking-wide uppercase opacity-60"
+                >
                     {{ day.weekday }}
                 </span>
                 <span class="mt-0.5 block font-display text-base font-bold">
@@ -329,10 +337,7 @@ function confirmCancel(): void {
                         </span>
                     </div>
 
-                    <div
-                        v-if="group.appointments.length"
-                        class="space-y-2.5"
-                    >
+                    <div v-if="group.appointments.length" class="space-y-2.5">
                         <AppointmentCard
                             v-for="appointment in group.appointments"
                             :key="appointment.id"
@@ -375,7 +380,6 @@ function confirmCancel(): void {
                 </div>
             </aside>
         </div>
-
     </div>
 
     <RescheduleDialog
@@ -389,7 +393,9 @@ function confirmCancel(): void {
         :open="cancelTarget !== null"
         @update:open="(open) => (!open ? (cancelTarget = null) : null)"
     >
-        <DialogContent class="border-hairline bg-white p-6 text-ink sm:max-w-md">
+        <DialogContent
+            class="border-hairline bg-white p-6 text-ink sm:max-w-md"
+        >
             <DialogHeader class="text-left">
                 <DialogTitle class="font-display text-lg font-bold">
                     Cancelar cita
@@ -422,6 +428,4 @@ function confirmCancel(): void {
             </div>
         </DialogContent>
     </Dialog>
-
 </template>
-

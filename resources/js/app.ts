@@ -3,6 +3,7 @@ import { initializeTheme } from '@/composables/useAppearance';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import AuthShowcaseLayout from '@/layouts/auth/AuthShowcaseLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 
@@ -14,6 +15,8 @@ void createInertiaApp({
         switch (true) {
             case name === 'Welcome':
                 return null;
+            case name === 'auth/Login':
+                return AuthShowcaseLayout;
             case name.startsWith('admin/'):
                 return AdminLayout;
             case name.startsWith('auth/'):

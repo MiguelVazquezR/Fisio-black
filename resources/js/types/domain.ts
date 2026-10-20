@@ -46,9 +46,17 @@ export type BookingConfig = {
     currency: string;
 };
 
+export type AvailabilitySlotState =
+    | 'available'
+    | 'pending'
+    | 'booked'
+    | 'unavailable';
+
 export type AvailabilitySlot = {
     value: string;
+    label: string;
     available: boolean;
+    state: AvailabilitySlotState;
 };
 
 export type AvailabilityDay = {

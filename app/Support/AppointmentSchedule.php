@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 class AppointmentSchedule
 {
     /**
-     * @return array{date: string, is_open: bool, message: string|null, slots: array<int, array{value: string, available: bool}>}
+     * @return array{date: string, is_open: bool, message: string|null, slots: array<int, array{value: string, label: string, available: bool, state: string}>}
      */
     public function availability(
         CarbonImmutable $date,
@@ -44,14 +44,21 @@ class AppointmentSchedule
         foreach ($this->startTimes($date, $service, $isHomeService) as $time) {
             $start = $date->setTimeFromTimeString($time);
             $end = $start->addMinutes($service->duration_minutes);
+            $overlapping = $this->overlapping($start, $end, $appointments);
 
-            $available = ! $this->overlaps($start, $end, $appointments);
+            $state = match (true) {
+                $overlapping->contains(fn (Appointment $appointment): bool => $appointment->status !== AppointmentStatus::Pending) => 'booked',
+                $overlapping->isNotEmpty() => 'pending',
+                $enforceLeadTime && $start->lessThan($earliest) => 'unavailable',
+                default => 'available',
+            };
 
-            if ($enforceLeadTime) {
-                $available = $available && $start->greaterThanOrEqualTo($earliest);
-            }
-
-            $slots[] = ['value' => $time, 'available' => $available];
+            $slots[] = [
+                'value' => $time,
+                'label' => TimeLabel::twelveHour($time),
+                'available' => $state === 'available',
+                'state' => $state,
+            ];
         }
 
         return [
@@ -157,14 +164,17 @@ class AppointmentSchedule
 
     /**
      * @param  Collection<int, Appointment>  $appointments
+     * @return Collection<int, Appointment>
      */
-    private function overlaps(CarbonImmutable $start, CarbonImmutable $end, Collection $appointments): bool
+    private function overlapping(CarbonImmutable $start, CarbonImmutable $end, Collection $appointments): Collection
     {
-        return $appointments->contains(function (Appointment $appointment) use ($start, $end): bool {
-            $appointmentStart = $appointment->startsAt();
-            $appointmentEnd = $appointmentStart->addMinutes($appointment->service->duration_minutes);
+        return $appointments
+            ->filter(function (Appointment $appointment) use ($start, $end): bool {
+                $appointmentStart = $appointment->startsAt();
+                $appointmentEnd = $appointmentStart->addMinutes($appointment->service->duration_minutes);
 
-            return $start->lessThan($appointmentEnd) && $end->greaterThan($appointmentStart);
-        });
+                return $start->lessThan($appointmentEnd) && $end->greaterThan($appointmentStart);
+            })
+            ->values();
     }
 }

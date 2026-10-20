@@ -2,11 +2,14 @@
 
 use App\Enums\AppointmentStatus;
 use App\Enums\ServiceCategory;
+use App\Mail\NewAppointmentReceived;
 use App\Models\Appointment;
 use App\Models\BlockedDate;
 use App\Models\Service;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function fisioNextOpenDate(): string
@@ -85,6 +88,106 @@ test('home service availability uses the morning window', function () {
         ->assertJsonCount(6, 'slots');
 });
 
+test('availability marks booked and pending slots with twelve hour labels', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $date = fisioNextOpenDate();
+
+    Appointment::factory()->confirmed()->create([
+        'service_id' => $service->id,
+        'appointment_date' => $date,
+        'appointment_time' => '09:00:00',
+    ]);
+    Appointment::factory()->create([
+        'service_id' => $service->id,
+        'appointment_date' => $date,
+        'appointment_time' => '11:00:00',
+        'status' => AppointmentStatus::Pending,
+    ]);
+
+    $slots = collect($this->getJson(route('booking.availability', [
+        'date' => $date,
+        'service_id' => $service->id,
+        'modality' => 'clinic',
+    ]))
+        ->assertOk()
+        ->json('slots'))
+        ->keyBy('value');
+
+    expect($slots['08:00']['state'])->toBe('available')
+        ->and($slots['08:00']['available'])->toBeTrue()
+        ->and($slots['09:00']['state'])->toBe('booked')
+        ->and($slots['09:00']['available'])->toBeFalse()
+        ->and($slots['11:00']['state'])->toBe('pending')
+        ->and($slots['11:00']['available'])->toBeFalse()
+        ->and($slots['11:00']['label'])->toBe('11:00 a.m.')
+        ->and($slots['17:00']['label'])->toBe('5:00 p.m.');
+});
+
+test('a pending appointment blocks its slot', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $date = fisioNextOpenDate();
+
+    Appointment::factory()->create([
+        'service_id' => $service->id,
+        'appointment_date' => $date,
+        'appointment_time' => '09:00:00',
+        'status' => AppointmentStatus::Pending,
+    ]);
+
+    $response = $this->post(route('appointments.store'), [
+        'service_id' => $service->id,
+        'is_home_service' => false,
+        'appointment_date' => $date,
+        'appointment_time' => '09:00',
+        'patient_name' => 'Carlos Ruiz',
+        'patient_phone' => '+523311112233',
+    ]);
+
+    $response->assertSessionHasErrors('appointment_time');
+    expect(Appointment::query()->count())->toBe(1);
+});
+
+test('admins receive an email when an appointment is booked', function () {
+    Mail::fake();
+
+    $admin = User::factory()->create(['email' => 'agenda@fisioblack.com']);
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $date = fisioNextOpenDate();
+
+    $this->post(route('appointments.store'), [
+        'service_id' => $service->id,
+        'is_home_service' => false,
+        'appointment_date' => $date,
+        'appointment_time' => '09:00',
+        'patient_name' => 'María López',
+        'patient_phone' => '3312345678',
+    ])->assertSessionHasNoErrors();
+
+    Mail::assertSent(
+        NewAppointmentReceived::class,
+        fn (NewAppointmentReceived $mail): bool => $mail->hasTo($admin->email)
+            && $mail->appointment->patient_name === 'María López',
+    );
+});
+
+test('the new appointment email renders the appointment details', function () {
+    $service = Service::factory()->create(['name' => 'Terapia neural']);
+    $appointment = Appointment::factory()->create([
+        'service_id' => $service->id,
+        'patient_name' => 'María López',
+        'patient_phone' => '+523312345678',
+        'appointment_date' => '2026-11-05',
+        'appointment_time' => '16:30:00',
+        'is_home_service' => false,
+    ])->load('service');
+
+    (new NewAppointmentReceived($appointment))
+        ->assertSeeInHtml('María López')
+        ->assertSeeInHtml('Terapia neural')
+        ->assertSeeInHtml('4:30 p.m.')
+        ->assertSeeInHtml('FB-');
+});
+
 test('a patient can book an available slot', function () {
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $date = fisioNextOpenDate();
@@ -102,6 +205,11 @@ test('a patient can book an available slot', function () {
 
     $response->assertRedirect(route('home').'#agendar');
     $response->assertSessionHas('appointment');
+
+    $summary = session('appointment');
+
+    expect($summary['appointment_time'])->toBe('9:00 a.m.')
+        ->and($summary['folio'])->toStartWith('FB-');
 
     $this->assertDatabaseHas('appointments', [
         'service_id' => $service->id,

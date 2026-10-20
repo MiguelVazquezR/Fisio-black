@@ -22,7 +22,7 @@ test('the confirmation message includes the appointment details', function () {
     expect($message)
         ->toContain('María López')
         ->toContain('Punción seca')
-        ->toContain('10:00')
+        ->toContain('10:00 a.m.')
         ->toContain('CONFIRMADA')
         ->toContain('FisioBlack')
         ->toContain('Avenida Marina Vallarta 636');
@@ -39,11 +39,11 @@ test('the reminder and reschedule messages are available', function () {
 
     expect(WhatsAppMessage::reminder($appointment))
         ->toContain('te recordamos tu cita')
-        ->toContain('12:00');
+        ->toContain('12:00 p.m.');
 
     expect(WhatsAppMessage::reschedule($appointment))
         ->toContain('REAGENDADA')
-        ->toContain('Nueva hora: 12:00');
+        ->toContain('Nueva hora: 12:00 p.m.');
 });
 
 test('whatsapp urls use the international phone number', function () {

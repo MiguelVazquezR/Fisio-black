@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { CalendarClock } from '@lucide/vue';
+import { computed } from 'vue';
 import type { AvailabilitySlot } from '@/types';
 
-defineProps<{
+const props = defineProps<{
     slots: AvailabilitySlot[];
     loading: boolean;
     isOpen: boolean;
@@ -13,6 +14,19 @@ defineProps<{
 const emit = defineEmits<{
     'update:modelValue': [value: string];
 }>();
+
+const availableCount = computed(
+    () => props.slots.filter((slot) => slot.available).length,
+);
+
+function slotTitle(slot: AvailabilitySlot): string {
+    return {
+        available: 'Horario disponible',
+        pending: 'Cita pendiente de confirmación',
+        booked: 'Horario ya ocupado',
+        unavailable: 'Horario no disponible',
+    }[slot.state];
+}
 </script>
 
 <template>
@@ -23,7 +37,7 @@ const emit = defineEmits<{
                 v-if="!loading && slots.length"
                 class="text-[11px] font-medium text-ink/40"
             >
-                {{ slots.length }} opciones
+                {{ availableCount }} disponibles
             </span>
         </div>
 
@@ -51,29 +65,60 @@ const emit = defineEmits<{
         </div>
 
         <div v-else class="mt-4 grid grid-cols-3 gap-2">
-            <button
+            <div
                 v-for="slot in slots"
                 :key="slot.value"
-                type="button"
-                :disabled="!slot.available"
-                :aria-pressed="slot.value === modelValue"
-                class="rounded-lg border px-2 py-2.5 text-sm font-semibold transition"
-                :class="
-                    slot.value === modelValue
-                        ? 'border-ink bg-ink text-white'
-                        : slot.available
-                          ? 'border-hairline bg-white text-ink hover:border-ink/40'
-                          : 'cursor-not-allowed border-hairline bg-mist text-ink/25 line-through'
-                "
-                @click="emit('update:modelValue', slot.value)"
+                class="group relative"
             >
-                {{ slot.value }}
-            </button>
+                <button
+                    type="button"
+                    :disabled="!slot.available"
+                    :aria-pressed="slot.value === modelValue"
+                    :title="slotTitle(slot)"
+                    class="w-full rounded-lg border px-1 py-2.5 text-sm font-semibold transition"
+                    :class="
+                        slot.value === modelValue
+                            ? 'border-ink bg-ink text-white'
+                            : slot.available
+                              ? 'border-hairline bg-white text-ink hover:border-ink/40'
+                              : slot.state === 'pending'
+                                ? 'cursor-not-allowed border-amber-300 bg-amber-50 text-amber-800'
+                                : 'cursor-not-allowed border-hairline bg-mist text-ink/25'
+                    "
+                    @click="emit('update:modelValue', slot.value)"
+                >
+                    <span
+                        :class="{
+                            'line-through decoration-ink/30':
+                                slot.state === 'booked',
+                        }"
+                    >
+                        {{ slot.label }}
+                    </span>
+                </button>
+
+                <span
+                    v-if="slot.state === 'pending'"
+                    class="pointer-events-none absolute -top-9 left-1/2 z-20 hidden -translate-x-1/2 rounded-md bg-ink px-2.5 py-1.5 text-[10px] font-medium whitespace-nowrap text-white shadow-lg group-hover:block group-focus-within:block"
+                >
+                    Cita pendiente de confirmación
+                </span>
+            </div>
         </div>
 
-        <p v-if="!loading && isOpen && slots.length" class="mt-3 text-[10px] text-ink/40">
-            Los horarios tachados ya están ocupados. La duración del servicio
-            reserva el bloque completo.
-        </p>
+        <div
+            v-if="!loading && isOpen && slots.length"
+            class="mt-3 space-y-1 text-[10px] leading-relaxed text-ink/40"
+        >
+            <p class="flex items-center gap-1.5">
+                <span class="size-2 shrink-0 rounded-full bg-amber-400" />
+                En amarillo: otra cita está pendiente de confirmación en ese
+                horario.
+            </p>
+            <p>
+                Los horarios tachados ya están ocupados. La duración del
+                servicio reserva el bloque completo.
+            </p>
+        </div>
     </div>
 </template>

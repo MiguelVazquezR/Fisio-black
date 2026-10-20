@@ -200,7 +200,7 @@ const plan = [
                 </div>
 
                 <div
-                    class="absolute -bottom-6 -left-4 hidden rounded-2xl border border-edge bg-panel-soft px-5 py-4 shadow-xl sm:block"
+                    class="absolute -bottom-6 -left-4 hidden rounded-2xl border border-gray-300 bg-panel-soft px-5 py-4 shadow-xl sm:block"
                 >
                     <p
                         class="text-[11px] tracking-widest text-white/40 uppercase"

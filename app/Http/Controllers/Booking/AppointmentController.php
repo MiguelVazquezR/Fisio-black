@@ -7,14 +7,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AvailabilityRequest;
 use App\Http\Requests\StoreAppointmentRequest;
 use App\Http\Resources\AppointmentResource;
+use App\Mail\NewAppointmentReceived;
 use App\Models\Appointment;
 use App\Models\Service;
+use App\Models\User;
 use App\Support\AppointmentSchedule;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class AppointmentController extends Controller
 {
@@ -67,13 +70,20 @@ class AppointmentController extends Controller
             ]);
         });
 
-        Inertia::flash('toast', [
-            'type' => 'success',
-            'message' => 'Tu cita fue registrada. Te confirmaremos por WhatsApp.',
-        ]);
+        $appointment->load('service');
+
+        $admins = User::query()->pluck('email')->filter()->all();
+
+        if ($admins !== []) {
+            try {
+                Mail::to($admins)->send(new NewAppointmentReceived($appointment));
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
 
         return redirect()
             ->to(route('home').'#agendar')
-            ->with('appointment', (new AppointmentResource($appointment->load('service')))->resolve());
+            ->with('appointment', (new AppointmentResource($appointment))->resolve());
     }
 }
