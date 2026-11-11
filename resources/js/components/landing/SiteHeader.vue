@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Activity, CalendarCheck, MessageCircle } from '@lucide/vue';
+import { CalendarCheck, MessageCircle } from '@lucide/vue';
 import type { ClinicInfo } from '@/types';
 import { whatsappUrl } from '@/lib/format';
 
@@ -22,9 +22,15 @@ const navLinks = [
         <div class="content-shell flex h-18 items-center justify-between gap-6">
             <a href="#inicio" class="flex items-center gap-2.5">
                 <span
-                    class="grid size-9 place-items-center rounded-xl bg-brand text-ink"
+                    class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-mist"
                 >
-                    <Activity class="size-5" stroke-width="2.5" />
+                    <img
+                        src="/images/brand-mark.png"
+                        alt=""
+                        width="87"
+                        height="256"
+                        class="h-9 w-auto"
+                    />
                 </span>
                 <span
                     class="font-display text-xl font-bold tracking-tight text-white"

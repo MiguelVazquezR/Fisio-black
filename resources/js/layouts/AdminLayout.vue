@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
-    Activity,
     CalendarDays,
     ExternalLink,
     LogOut,
@@ -31,9 +30,15 @@ function closeSession(): void {
             <div class="flex h-18 items-center border-b border-hairline px-6">
                 <Link :href="dashboard.url()" class="flex items-center gap-2.5">
                     <span
-                        class="grid size-9 place-items-center rounded-xl bg-ink text-brand"
+                        class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-mist"
                     >
-                        <Activity class="size-5" stroke-width="2.5" />
+                        <img
+                            src="/images/brand-mark.png"
+                            alt=""
+                            width="87"
+                            height="256"
+                            class="h-9 w-auto"
+                        />
                     </span>
                     <span class="font-display text-lg font-bold tracking-tight">
                         Fisio<span class="text-[#6d8a1f]">Black</span>

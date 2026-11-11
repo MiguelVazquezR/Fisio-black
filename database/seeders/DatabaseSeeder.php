@@ -25,8 +25,7 @@ class DatabaseSeeder extends Seeder
         }
 
         User::query()->firstOrCreate(
-            ['email' => 'admin@fisioblack.com'],
-            ['name' => 'FisioBlack Admin', 'password' => 'password'],
+            ['name' => 'Carlos Peña', 'password' => 'FisioB.26'],
         );
 
         $this->call(ServiceSeeder::class);
